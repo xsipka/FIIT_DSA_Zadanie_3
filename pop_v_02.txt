@@ -1,0 +1,383 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define INFINITY 10000
+#define UNVISITED  '0'		
+#define VISITED    '1'
+#define FOUND      'X'
+
+#define PRINCESS_1 '1'
+#define PRINCESS_2 '2'
+#define PRINCESS_3 '3'
+
+#define TRUE 1
+#define FALSE 0
+
+
+typedef struct mapa {
+	struct mapa *prev;
+	short x;
+	short y;
+	short lenght;	// dlzka prejdena od startu
+	short value;	// hodnota vrchola - 2 ak husty les, inac 1
+	char type;	// drak, cesta, princezna....
+	char state;	// nenavstiveny/navstiveny....
+	char princess;
+} MAPA;
+
+typedef struct heap {
+	MAPA *path;
+	struct heap *queue;
+	short key;	// najkratsia vzdialenost od povodneho vrchola, vlastne length
+} HEAP;
+
+
+struct mapa **map = NULL;
+struct heap *priotity_queue = NULL;
+int heap_size = 0;
+int array_length = 0;
+int dx, dy, dragon_dead = FALSE;
+int px1, py1, princess_1_found = FALSE;
+int px2, py2, princess_2_found = FALSE;
+int px3, py3, princess_3_found = FALSE;
+
+
+void insert_item(int length, int x, int y);
+
+
+// inicializuje mapu..............................................................
+void map_init(char **mapa, int n, int m) {
+	int princess_counter = 0;
+	
+	map = (MAPA **)malloc(m * sizeof(MAPA *));
+	for (int i = 0; i < m; i++)
+		map[i] = (MAPA *)malloc(n * sizeof(MAPA));
+
+	for (int i = 0; i < m; i++) {
+		for (int j = 0; j < n; j++) {
+			map[i][j].x = i;
+			map[i][j].y = j;
+			map[i][j].type = mapa[i][j];
+			map[i][j].lenght = INFINITY;
+			map[i][j].state = UNVISITED;
+			map[i][j].prev = NULL;
+			if (mapa[i][j] == 'H') {
+				map[i][j].value = 2;
+			}
+			else {
+				map[i][j].value = 1;
+			}
+			if (mapa[i][j] == 'P' && princess_counter == 0) {
+				map[i][j].princess = PRINCESS_1;
+				++princess_counter;
+				continue;
+			}
+			if (mapa[i][j] == 'P' && princess_counter == 1) {
+				map[i][j].princess = PRINCESS_2;
+				princess_counter++;
+				continue;
+			}
+			if (mapa[i][j] == 'P' && princess_counter == 2) {
+				map[i][j].princess = PRINCESS_3;
+				princess_counter++;
+				continue;
+			}
+		}
+	}
+	map[0][0].lenght = map[0][0].value;
+}
+
+
+// inicilaizuje queue.............................................................
+void queue_init(int n, int m) {
+
+	heap_size = 0;
+	priotity_queue->queue = (HEAP *)malloc(m * n * sizeof(HEAP));
+	if (priotity_queue->queue == NULL) {
+		printf("Pamat nebola alokovana...\n");
+		exit(0);
+	}
+	for (int i = 0; i < m * n; i++) {
+		priotity_queue->queue[i].path = NULL;
+	}
+}
+
+
+// znova inicializuje mapu........................................................
+void new_map_init(int n, int m, int x, int y) {
+
+	queue_init(n, m);
+	insert_item(-1, x, y);
+	for (int i = 0; i < m; i++) {
+		for (int j = 0; j < n; j++) {
+			map[i][j].lenght = INFINITY;
+			if (map[i][j].state == VISITED)
+				map[i][j].state = UNVISITED;
+			map[i][j].prev = NULL;
+		}
+	}
+}
+
+
+// "uprace" min haldu do spravneho stavu..........................................
+void heapify(struct heap *priotity_queue, int size, int index) {
+	struct heap temp;
+	int parent_index = index;
+	int l_child_index = 2 * index + 1;
+	int r_child_index = 2 * index + 2;
+
+	if (l_child_index < size && priotity_queue->queue[l_child_index].key < priotity_queue->queue[parent_index].key) {
+		parent_index = l_child_index;
+	}
+	if (r_child_index < size && priotity_queue->queue[r_child_index].key < priotity_queue->queue[parent_index].key) {
+		parent_index = r_child_index;
+	}
+	if (parent_index != index) {
+		temp = priotity_queue->queue[parent_index];
+		priotity_queue->queue[parent_index] = priotity_queue->queue[index];
+		priotity_queue->queue[index] = temp;
+		heapify(priotity_queue, size, parent_index);
+	}
+}
+
+
+// vlozi prvok do haldy a opravi nerovnosti.......................................
+void insert_item(int length, int x, int y) {
+
+	if (map[x][y].prev != NULL) {
+		priotity_queue->queue[heap_size].key = map[x][y].value + length;
+	}
+	else
+		priotity_queue->queue[heap_size].key = length;
+
+	if (priotity_queue->queue[heap_size].key < map[x][y].lenght) {
+		map[x][y].lenght = priotity_queue->queue[heap_size].key;
+	}
+
+	if (map[x][y].state == UNVISITED)
+		map[x][y].state = VISITED;
+
+	priotity_queue->queue[heap_size].path = (MAPA *)malloc(sizeof(MAPA));
+	priotity_queue->queue[heap_size].path->x = x;
+	priotity_queue->queue[heap_size].path->y = y;
+	heap_size += 1;
+	for (int i = heap_size / 2 - 1; i >= 0; i--) {
+		heapify(priotity_queue, heap_size, i);
+	}
+}
+
+
+// vybernie najmensi prvok z haldy a opravi nerovnosti.............................
+HEAP delete_min() {
+	struct heap temp;
+	struct heap to_return = priotity_queue->queue[0];
+	int index = 0;
+
+	temp = priotity_queue->queue[heap_size - 1];
+	priotity_queue->queue[heap_size - 1] = priotity_queue->queue[index];
+	priotity_queue->queue[index] = temp;
+	heap_size -= 1;
+
+	for (int i = heap_size / 2 - 1; i >= 0; i--) {
+		heapify(priotity_queue, heap_size, index);
+	}
+	return to_return;
+}
+
+
+// zisti ci su suradnice v hraniciach mapy.........................................
+int in_area(int x, int y, int m, int n) {
+
+	if (x >= 0 && x <= m - 1 && y >= 0 && y <= n - 1) {
+		//printf("TRUE %d %d\n", x, y);
+		return TRUE;
+	}
+	else {
+		//printf("FALSE %d %d\n", x, y);
+		return FALSE;
+	}
+}
+
+
+// zisti cí je mozne navstivit suseda..............................................
+int ok_to_visit(int x, int y) {
+
+	if (map[x][y].state == UNVISITED)
+		return TRUE;
+
+	return FALSE;
+}
+
+
+// vypse cestu pomocou predchadzajuceho vrcholu....................................
+int *print_path(int x, int y, int *path, int index) {
+
+	//printf("x: %d y: %d\n", x, y);
+
+	array_length += 2;
+	path[index++] = x;
+	path[index++] = y;
+
+	if (map[x][y].prev == NULL && dragon_dead == TRUE)
+		return path;
+	if (map[x][y].prev->x == dx && map[x][y].prev->y == dy && princess_1_found == TRUE)
+		return path;
+	if (map[x][y].prev->x == px2 && map[x][y].prev->y == py2 && princess_1_found == TRUE)
+		return path;
+	print_path(map[x][y].prev->x, map[x][y].prev->y, path, index);
+}
+
+
+// dijkstrov algoritmus............................................................
+void dijkstra(int x, int y, int length, int n, int m) {
+	if (in_area(x, y - 1, m, n) == TRUE && ok_to_visit(x, y - 1) == TRUE && map[x][y - 1].type != 'N') {
+		map[x][y - 1].prev = &map[x][y];
+		insert_item(length, x, y - 1);
+	}
+	if (in_area(x, y + 1, m, n) == TRUE && ok_to_visit(x, y + 1) == TRUE && map[x][y + 1].type != 'N') {
+		map[x][y + 1].prev = &map[x][y];
+		insert_item(length, x, y + 1);
+	}
+	if (in_area(x + 1, y, m, n) == TRUE && ok_to_visit(x + 1, y) == TRUE && map[x + 1][y].type != 'N') {
+		map[x + 1][y].prev = &map[x][y];
+		insert_item(length, x + 1, y);
+	}
+	if (in_area(x - 1, y, m, n) == TRUE && ok_to_visit(x - 1, y) == TRUE && map[x - 1][y].type != 'N') {
+		map[x - 1][y].prev = &map[x][y];
+		insert_item(length, x - 1, y);
+	}
+}
+
+
+// zmeni udaje, ked nieco najde a vrati cestu......................................
+int *found_path(int *path_final, int x, int y) {
+	int temp_length, temp;
+	int *curr_path;
+
+	map[x][y].type = FOUND;
+	temp_length = array_length;
+	curr_path = (int *)malloc(map[x][y].lenght * 2 * sizeof(int));
+	curr_path = print_path(x, y, curr_path, 0);
+	temp = array_length - temp_length;
+	path_final = (int *)realloc(path_final, array_length * sizeof(int));
+	for (int i = temp - 1; i >= 0; i--)
+		path_final[temp_length++] = curr_path[i];
+
+	return path_final;
+}
+
+
+// ved to funguje, Turing pls......................................................
+int *zachran_princezne(char **mapa, int n, int m, int t, int *dlzka_cesty) {
+	int x = 0, y = 0;	// suradnice
+	int length_final = 0, length = 0; // dlzka
+	int *path_final = (int *)malloc(sizeof(int));
+	int *path_to_dragon;
+	HEAP curr;
+
+	queue_init(n, m);
+	map_init(mapa, n, m);
+
+	// vlozi prvy prvok do haldy
+	insert_item(map[0][0].value, 0, 0);
+
+
+	// hlada draka............................................................................................
+	while (map[x][y].type != 'D') {
+		curr = delete_min();
+		x = curr.path->x;
+		y = curr.path->y;
+		length = curr.key;
+
+		if (map[x][y].type == 'D') {
+			printf("Uf uz som presiel %d.\n", map[x][y].lenght);
+			length_final += map[x][y].lenght;
+			printf("Aaaaaa Drak, musim ho zabit.\n");
+			break;
+		}
+		dijkstra(x, y, length, n, m);
+	}
+	dx = x;
+	dy = y;
+	dragon_dead = TRUE;
+	path_final = found_path(path_final, x, y);
+	new_map_init(n, m, dx, dy);
+	path_to_dragon = (int *)malloc(array_length * sizeof(int));
+	path_to_dragon = path_final;
+
+
+	// hlada princezne........................................................................................
+	for (int i = 0; i < 3; i++) {
+		while (TRUE) {
+			curr = delete_min();
+			x = curr.path->x;
+			y = curr.path->y;
+			length = curr.key;
+
+			if (map[x][y].type == 'P') {
+				printf("Uf uz som presiel %d.\n", map[x][y].lenght);
+				length_final += map[x][y].lenght;
+				printf("Je tu teta, musim ju zachranit.\n");
+				break;
+			}
+			dijkstra(x, y, length, n, m);
+		}
+		princess_1_found = TRUE;
+		px1 = x;
+		py1 = y;
+		path_final = found_path(path_final, x, y);
+		new_map_init(n, m, px1, py1);
+		princess_1_found = FALSE;
+		px2 = x;
+		py2 = y;
+	}
+
+	for (int i = 0; i < array_length; i += 2) printf("%d %d\n", path_final[i], path_final[i + 1]);
+	printf("Takto vela som presiel: %d\n", length_final);
+	//dlzka_cesty = array_length / 2;
+
+	
+
+	return path_final;
+}
+
+
+
+
+int main() {
+	int num;
+	int t = 30;	//cas
+	int *dlzka_cesty = (int *)malloc(sizeof(int));
+	priotity_queue = (HEAP *)malloc(sizeof(HEAP));
+
+	int m, n;	// rozmery mapy
+	char *row;
+	char **mapa = NULL;
+
+	// nacitanie mapy........................................................
+	scanf("%d", &n);
+	scanf("%d", &m);
+
+	//mapa = (char **)malloc(n * sizeof(char*) + (m * n * sizeof(char)));
+	mapa = (char **)malloc(m * sizeof(char *));
+	for (int i = 0; i < m; i++)
+		mapa[i] = (char *)malloc(n * sizeof(char));
+
+	row = (char *)malloc(n * sizeof(char));
+	for (int i = 0; i < m; i++) {
+		scanf("%s", row);
+		//mapa[i] = row;
+		for (int j = 0; j < n; j++) {
+			mapa[i][j] = row[j];
+		}
+	}
+
+	//print_map(mapa, n, m);	// testovaci vypis mapy
+	//........................................................................
+	int *cesta = zachran_princezne(mapa, n, m, t, *dlzka_cesty);
+
+
+
+	return 0;
+}

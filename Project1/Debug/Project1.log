@@ -1,0 +1,15 @@
+﻿  Source.c
+d:\dokumenty\stu - fiit\3. sem\dsa\poplvár\project1\project1\source.c(6): warning C4068: unknown pragma
+d:\dokumenty\stu - fiit\3. sem\dsa\poplvár\project1\project1\source.c(427): warning C4047: ':': 'int' differs in levels of indirection from 'void *'
+d:\dokumenty\stu - fiit\3. sem\dsa\poplvár\project1\project1\source.c(429): warning C4047: ':': 'int' differs in levels of indirection from 'void *'
+d:\dokumenty\stu - fiit\3. sem\dsa\poplvár\project1\project1\source.c(503): warning C4047: 'function': 'int *' differs in levels of indirection from 'int'
+d:\dokumenty\stu - fiit\3. sem\dsa\poplvár\project1\project1\source.c(503): warning C4024: 'zachran_princezne': different types for formal and actual parameter 5
+d:\dokumenty\stu - fiit\3. sem\dsa\poplvár\project1\project1\source.c(485): warning C4996: 'scanf': This function or variable may be unsafe. Consider using scanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.17134.0\ucrt\stdio.h(1274): note: see declaration of 'scanf'
+d:\dokumenty\stu - fiit\3. sem\dsa\poplvár\project1\project1\source.c(486): warning C4996: 'scanf': This function or variable may be unsafe. Consider using scanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.17134.0\ucrt\stdio.h(1274): note: see declaration of 'scanf'
+d:\dokumenty\stu - fiit\3. sem\dsa\poplvár\project1\project1\source.c(495): warning C4996: 'scanf': This function or variable may be unsafe. Consider using scanf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.17134.0\ucrt\stdio.h(1274): note: see declaration of 'scanf'
+d:\dokumenty\stu - fiit\3. sem\dsa\poplvár\project1\project1\source.c(475): warning C4101: 'num': unreferenced local variable
+d:\dokumenty\stu - fiit\3. sem\dsa\poplvár\project1\project1\source.c(287): warning C4715: 'print_path': not all control paths return a value
+  Project1.vcxproj -> D:\Dokumenty\STU - FIIT\3. sem\DSA\poplvár\Project1\Debug\Project1.exe
